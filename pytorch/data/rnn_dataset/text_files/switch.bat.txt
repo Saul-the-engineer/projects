@@ -1,0 +1,5 @@
+if exist data.npy del /Q /F data.npy
+if exist vocab.pkl del /Q /F vocab.pkl
+if exist input.txt del /Q /F input.txt
+
+mklink input.txt %1
