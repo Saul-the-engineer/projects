@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import copy
 import torch.optim as optim
 
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import Dataset, DataLoader
 
 
@@ -14,28 +14,33 @@ class NeuralNetwork(nn.Module):
         super(NeuralNetwork, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.dropout1 = nn.Dropout(dropout)
+        self.bn1 = nn.BatchNorm1d(hidden_size)
         self.fc2 = nn.Linear(hidden_size, 2 * hidden_size)
         self.dropout2 = nn.Dropout(dropout)
+        self.bn2 = nn.BatchNorm1d(2 * hidden_size)
         self.fc3 = nn.Linear(2 * hidden_size, hidden_size)
         self.dropout3 = nn.Dropout(dropout)
+        self.bn3 = nn.BatchNorm1d(hidden_size)
         self.fc4 = nn.Linear(hidden_size, 1)
 
         # Weight initialization
-        init.xavier_uniform_(self.fc1.weight)
-        init.xavier_uniform_(self.fc2.weight)
-        init.xavier_uniform_(self.fc3.weight)
+        init.kaiming_uniform_(self.fc1.weight)
+        init.kaiming_uniform_(self.fc2.weight)
+        init.kaiming_uniform_(self.fc3.weight)
         init.xavier_uniform_(self.fc4.weight)
 
         # initialize bias with zeros
         init.zeros_(self.fc1.bias)
         init.zeros_(self.fc2.bias)
         init.zeros_(self.fc3.bias)
+        init.zeros_(self.fc4.bias)
 
     def forward(self, x):
-        x = F.relu(self.dropout1(self.fc1(x)))
-        x = F.relu(self.dropout2(self.fc2(x)))
-        x = F.relu(self.dropout3(self.fc3(x)))
-        x = self.fc4(x)
+        # linear -> relu -> dropout -> batchnorm
+        x = self.bn1(self.dropout1(F.relu(self.fc1(x))))
+        x = self.bn2(self.dropout2(F.relu(self.fc2(x))))
+        x = self.bn3(self.dropout3(F.relu(self.fc3(x))))
+        x = self.fc4(x)  # Output layer
         return x
 
 
@@ -222,11 +227,9 @@ optimizer = optim.Adam(
     lr=0.001,
     weight_decay=0.1,
 )
-scheduler = ReduceLROnPlateau(
-    optimizer=optimizer,
-    factor=0.1,
-    patience=5,
-    min_lr=0,
+scheduler = CosineAnnealingLR(
+    optimizer,
+    T_max=n_epochs,
 )
 
 early_stopper = EarlyStopper(patience=patience)
@@ -253,7 +256,7 @@ for epoch in range(n_epochs):
     val_losses.append(val_loss)
 
     # Adjust learning rate
-    scheduler.step(val_loss)
+    scheduler.step(epoch)
 
     # Early Stopping
     if early_stopper.early_stop(val_loss, model):
