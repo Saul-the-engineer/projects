@@ -1,3 +1,4 @@
 # Ignore .env files
 .env
 models/*
+pytorch/data/*
