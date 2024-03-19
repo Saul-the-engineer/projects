@@ -1,5 +1,5 @@
 # Ignore .env files
 .env
 models/*
-pytorch/data/*
+pytorch/datasets/*
 huggingface/data/*
