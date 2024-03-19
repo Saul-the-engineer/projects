@@ -2,4 +2,4 @@
 .env
 models/*
 pytorch/datasets/*
-huggingface/data/*
+huggingface/datasets/*
