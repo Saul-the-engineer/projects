@@ -161,16 +161,40 @@ def validate_classification(model, data_loader, criterion, device):
     return loss_total, accuracy
 
 
-def predict(model, data_loader, device):
+def evaluate_classification(model, data_loader, device):
+    model.to(device).eval()
+    correct = 0
+    total_samples = 0
+    predictions = []
+    actuals = []
+
+    with torch.no_grad():
+        for x, y in data_loader:
+            x, y = x.to(device), y.to(device)
+            y_hat = model(x)
+            predictions.append(y_hat.argmax(1))
+            actuals.append(y)
+            correct += (y_hat.argmax(1) == y).sum().item()
+            total_samples += y.size(0)
+
+    predictions = torch.cat(predictions, dim=0).cpu().numpy()
+    actuals = torch.cat(actuals, dim=0).cpu().numpy()
+    accuracy = 100.0 * correct / total_samples
+
+    return predictions, actuals, accuracy
+
+
+def predict_classification(model, data_loader, device):
     model.to(device).eval()
     predictions = []
 
     with torch.no_grad():
         for x_batch in data_loader:
-            y_hat = model(x_batch.to(device))
-            predictions.append(y_hat.argmax(1).cpu())
+            x_batch = x_batch.to(device)
+            y_hat = model(x_batch)
+            predictions.append(y_hat.argmax(dim=1))
 
-    predictions = torch.cat(predictions, dim=0).squeeze().detach().numpy()
+    predictions = torch.cat(predictions, dim=0).cpu().numpy()
     return predictions
 
 
@@ -269,3 +293,55 @@ y_train_hat = model(x_train_tensor).cpu().detach().numpy()
 y_val_hat = model(x_val_tensor).cpu().detach().numpy()
 y_test_hat = model(x_test_tensor).cpu().detach().numpy()
 y_pred_hat = model(x_pred_tensor).cpu().detach().numpy()
+
+# Training loop without function calls
+for epoch in range(n_epochs):
+    # Training
+    model.train()
+    batch_loss = []
+    correct = 0
+    total_samples = 0
+
+    for x, y in train_loader:
+        x, y = x.to(device), y.to(device)
+        optimizer.zero_grad()
+        y_hat = model(x)
+        loss = criterion(y_hat, y)
+        loss.backward()
+        optimizer.step()
+        batch_loss.append(loss.item())
+        correct += (y_hat.argmax(1) == y).sum().item()
+        total_samples += y.size(0)
+
+    accuracy = 100.0 * correct / total_samples
+    loss_total = sum(batch_loss) / len(batch_loss)
+    train_losses.append(loss_total)
+    train_accuracies.append(accuracy)
+
+    # Validation
+    model.eval()
+    batch_loss = []
+    correct = 0
+    total_samples = 0
+
+    with torch.no_grad():
+        for x, y in val_loader:
+            x, y = x.to(device), y.to(device)
+            y_hat = model(x)
+            loss = criterion(y_hat, y)
+            batch_loss.append(loss.item())
+            correct += (y_hat.argmax(1) == y).sum().item()
+            total_samples += y.size(0)
+
+    accuracy = 100.0 * correct / total_samples
+    loss_total = sum(batch_loss) / len(batch_loss)
+    val_losses.append(loss_total)
+    val_accuracies.append(accuracy)
+
+    # Adjust learning rate
+    scheduler.step(epoch)
+
+    # Early Stopping
+    if early_stopper.early_stop(val_loss, model):
+        n_epochs.append(epoch)
+        break

@@ -151,16 +151,17 @@ def validate_regression(model, data_loader, criterion, device):
     return loss_total
 
 
-def predict(model, data_loader, device):
+def predict_regression(model, data_loader, device):
     model.to(device).eval()
     predictions = []
 
     with torch.no_grad():
         for x_batch in data_loader:
-            y_hat = model(x_batch.to(device))
-            predictions.append(y_hat.cpu())
+            x_batch = x_batch.to(device)
+            y_hat = model(x_batch)
+            predictions.append(y_hat)
 
-    predictions = torch.cat(predictions, dim=0).squeeze().numpy()
+    predictions = torch.cat(predictions, dim=0).cpu().numpy()
     return predictions
 
 
