@@ -2,9 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
-import copy
 import torch.optim as optim
 
+from copy import deepcopy
+from tqdm import tqdm
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import Dataset, DataLoader
 
@@ -82,21 +83,21 @@ class EarlyStopper:
         self.best_model_weights = None
         self.verbose = verbose
 
-    def early_stop(self, loss, model):
-        if self.verbose:
-            print(f"Early Stopping counter: {self.counter} out of {self.patience}")
+    def early_stop(self, loss:float, model:nn.Module):
         if loss < self.best_loss - self.min_delta:
             self.best_loss = loss
             self.counter = 0
             self.save_best_weights(model)
         else:
             self.counter += 1
+            if self.verbose:
+                print(f"Early Stopping counter: {self.counter} out of {self.patience}")
             if self.counter >= self.patience:
                 return True
         return False
 
     def save_best_weights(self, model):
-        self.best_model_weights = copy.deepcopy(model.state_dict())
+        self.best_model_weights = deepcopy(model.state_dict())
 
     def restore_best_weights(self, model):
         model.load_state_dict(self.best_model_weights)
