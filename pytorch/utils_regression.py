@@ -152,6 +152,24 @@ def validate_regression(model, data_loader, criterion, device):
     return loss_total
 
 
+def evaluate_regression(model, data_loader, device):
+    model.to(device).eval()
+    predictions = []
+    actuals = []
+
+    with torch.no_grad():
+        for x, y in data_loader:
+            x, y = x.to(device), y.to(device)
+            y_hat = model(x)
+            predictions.append(y_hat)
+            actuals.append(y)
+
+    predictions = torch.cat(predictions, dim=0).cpu().numpy()
+    actuals = torch.cat(actuals, dim=0).cpu().numpy()
+
+    return predictions, actuals
+
+
 def predict_regression(model, data_loader, device):
     model.to(device).eval()
     predictions = []
