@@ -3,3 +3,4 @@
 models/*
 pytorch/datasets/*
 huggingface/datasets/*
+scikit_learn/datasets/*
