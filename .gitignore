@@ -5,3 +5,6 @@ pytorch/datasets/*
 huggingface/datasets/*
 scikit_learn/datasets/*
 recommendation_systems/datasets/*
+
+# ignore any data folder
+data/
